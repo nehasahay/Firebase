@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Rock, Paper, Scissors!</title>
+</head>
+
+<body>
+    <main class="container center-align">
+        <div class="row">
+            <section class="col s6">
+                <h5 id="player1">Player 1</h5>
+                <div class="collection">
+                    <a href="#!" class="collection-item waves-effect waves-teal">Rock</a>
+                    <a href="#!" class="collection-item waves-effect waves-teal">Paper</a>
+                    <a href="#!" class="collection-item waves-effect waves-teal">Scissors</a>
+                </div>
+                <div class="row">
+                    <p class="col s6">Wins: <span id="player1-wins">0</span></p>
+                    <p class="col s6">Losses: <span id="player1-losses">0</span></p>
+                </div>
+            </section>
+
+            <section class="col s6">
+                <h5 id="player2">Player 2</h5>
+                <div class="collection">
+                    <a href="#!" class="collection-item waves-effect waves-teal">Rock</a>
+                    <a href="#!" class="collection-item waves-effect waves-teal">Paper</a>
+                    <a href="#!" class="collection-item waves-effect waves-teal">Scissors</a>
+                </div>
+                <div class="row">
+                    <p class="col s6">Wins: <span id="player2-wins">0</span></p>
+                    <p class="col s6">Losses: <span id="player2-losses">0</span></p>
+                </div>
+            </section>
+        </div>
+        <section>
+            <h3 id="result"></h3>
+        </section>
+    </main>
+    <!--JavaScript at end of body for optimized loading-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.5.7/firebase.js"></script>
+    <script src="logic.js"></script>
+</body>
+
+</html>
