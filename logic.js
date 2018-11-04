@@ -4,9 +4,9 @@ var config = {
     // Please include your own database!
 };
 
-firebase.initializeApp(config);
+// firebase.initializeApp(config);
 
-let database = firebase.database();
+// let database = firebase.database();
 
 let player1 = "Player 1",
     player1Choice = "",
