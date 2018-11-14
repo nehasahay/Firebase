@@ -1,3 +1,5 @@
+"use strict";
+
 // Initialize Firebase
 var config = {
     // Don't include this when you commit for security reasons.
@@ -12,14 +14,27 @@ var config = {
 
 firebase.initializeApp(config);
 
-let player1,
+let player1Name = "Waiting for player 1...",
     player1Choice = "",
     player1Wins = 0,
     player1Losses = 0,
-    player2,
+    player2Name = "Waiting for player 2...",
     player2Choice = "",
     player2Wins = 0,
-    player2Losses = 0;
+    player2Losses = 0,
+    players = [],
+    thisPlayer = {
+        name: "",
+        key: ""
+    };
+
+// Where all potential players will be stored
+const PLAYERSREF = firebase.database().ref("/players"),
+    // Where the chat messages will be stored
+    MESSAGESREF = firebase.database().ref("/messages"),
+    // A special location that stores all clients connected
+    CONNECTEDREF = firebase.database().ref(".info/connected");
+
 
 function playTheGame() {
     const player1WinConditions =
@@ -32,55 +47,35 @@ function playTheGame() {
     } else if (player1WinConditions) {
         player1Wins++;
         player2Losses++;
-        // This text isn't updated to sync across clients
-        $("#player1-wins").text(player1Wins);
-        $("#player2-losses").text(player2Losses);
+        // This text isn't updated to sync across clients        
         $("#result").text("Player 1 Wins!");
     } else {
         player2Wins++;
         player1Losses++;
         // This text isn't updated to sync across clients
-        $("#player2-wins").text(player2Wins);
-        $("#player1-losses").text(player1Losses);
         $("#result").text("Player 2 Wins!");
     };
 
-    console.log(players);
-
-    playersRef.child(players[0]).update({
+    PLAYERSREF.child(players[0]).update({
         wins: player1Wins,
         losses: player1Losses,
         choice: ""
     }).then(updateLocalPlayer1);
 
-    // Updating player 1 makes the playersRef.limitToFirst(2) execute before this does
-    // since it's on value change
-    playersRef.child(players[1]).update({
+    PLAYERSREF.child(players[1]).update({
         wins: player2Wins,
         losses: player2Losses,
         choice: ""
     }).then(updateLocalPlayer2);
-    // player1Choice = "";
-    // player2Choice = "";
 };
 
-// Where the players will be stored
-let playersRef = firebase.database().ref("/players");
-
-// A special location that stores all clients connected
-let connectedRef = firebase.database().ref(".info/connected");
-
-let thisPlayer;
-
-let players;
 
 // Executes both on load and on every new connection
-connectedRef.on("value", function (snap) {
-
+CONNECTEDREF.on("value", function (snap) {
     // If we have a connection (snap.val() is a boolean)
     if (snap.val()) {
         // Push a new player to the database
-        let player = playersRef.push({
+        let player = PLAYERSREF.push({
             name: "",
             choice: "",
             wins: 0,
@@ -88,7 +83,7 @@ connectedRef.on("value", function (snap) {
             dateAdded: firebase.database.ServerValue.TIMESTAMP
         });
 
-        thisPlayer = player.key;
+        thisPlayer.key = player.key;
         console.log(thisPlayer);
         // Removes the player from the database if the client disconnects
         player.onDisconnect().remove();
@@ -99,7 +94,8 @@ connectedRef.on("value", function (snap) {
     console.log("The read failed: " + errorObject.code);
 });
 
-// playersRef.on("value", function (snap) {
+
+// PLAYERSREF.on("value", function (snap) {
 //     // When first loaded or when the connections list changes...
 //     let numberOfObservers = snap.numChildren();
 //     // console.log(numberOfObservers);
@@ -107,54 +103,146 @@ connectedRef.on("value", function (snap) {
 // });
 
 
-$(".collection-item").on("click", function () {
-    if (players.indexOf(thisPlayer) !== -1) {
-        playersRef.child(thisPlayer).update({
-            choice: this.text
-        });
-        updateLocalPlayer1();
-        updateLocalPlayer2();
-    };
+document.querySelectorAll(".collection-item").forEach(choice => {
+    choice.addEventListener("click", function () {
+        if (players.indexOf(thisPlayer.key) !== -1) {
+            PLAYERSREF.child(thisPlayer.key).update({
+                choice: this.text
+            });
+            updateLocalPlayer1();
+            updateLocalPlayer2();
+        };
 
-    if (player1Choice && player2Choice) {
-        playTheGame();
-    };
+        if (player1Choice && player2Choice) {
+            playTheGame();
+        };
+    });
 });
 
 
-playersRef.orderByKey().limitToFirst(2).on("value", function (snap) {
-    players = Object.keys(snap.val());
+// Replace the following two functions with "value" if you can't fix the disconnect error
+// Detects a new player 1 or 2.
+PLAYERSREF.orderByKey().limitToFirst(2).on("child_added", function (snap) {
+    players.push(snap.key);
     console.log(players);
+
+}, function (errorObject) {
+    // In case of error this will print the error
+    console.log("The read failed: " + errorObject.code);
+});
+
+
+// Removes a disconnected player 1 or 2.
+PLAYERSREF.orderByKey().limitToFirst(2).on("child_removed", function (snap) {
+    let index = players.indexOf(snap.key);
+    players.splice(index, 1);
+    console.log(players);
+
+    // Update the local values of whichever player disconnected.
+    if (!index) {
+        player1Wins = 0;
+        player1Losses = 0;
+    } else {
+        player2Wins = 0;
+        player2Losses = 0;
+    };
+
+}, function (errorObject) {
+    // In case of error this will print the error
+    console.log("The read failed: " + errorObject.code);
 });
 
 
 function updateLocalPlayer1() {
     console.log(players[0]);
-    playersRef.child(players[0]).on("value", function (snap) {
+    PLAYERSREF.child(players[0]).on("value", function (snap) {
         console.log(snap.val());
         player1Choice = snap.val().choice;
         player1Wins = snap.val().wins;
         player1Losses = snap.val().losses;
+        $("#player1-wins").text(player1Wins);
+        $("#player1-losses").text(player1Losses);
+
+    }, function (errorObject) {
+        // In case of error this will print the error
+        console.log("The read failed: " + errorObject.code);
     });
 };
 
 
 function updateLocalPlayer2() {
     console.log(players[1]);
-    playersRef.child(players[1]).on("value", function (snap) {
+    PLAYERSREF.child(players[1]).on("value", function (snap) {
         console.log(snap.val());
         player2Choice = snap.val().choice;
         player2Wins = snap.val().wins;
         player2Losses = snap.val().losses;
+        $("#player2-wins").text(player2Wins);
+        $("#player2-losses").text(player2Losses);
+
+    }, function (errorObject) {
+        // In case of error this will print the error
+        console.log("The read failed: " + errorObject.code);
     });
 };
 
 
-//once()
-$("#whatever").on("click", function () {
-    let text = this.previousElementSibling.value.trim();
-    playersRef.child(thisPlayer).update({
-        name: text
+document.addEventListener("DOMContentLoaded", function () {
+    var elem = document.querySelector("#name-modal");
+    var instance = M.Modal.init(elem, {
+        dismissible: false
+    });
+    instance.open();
+});
+
+
+document.querySelector("#name-button").addEventListener("click", function () {
+    event.preventDefault();
+    let input = document.querySelector("#name-input").value.trim();
+    thisPlayer.name = input ? input : "Anonymous";
+    PLAYERSREF.child(thisPlayer.key).update({
+        name: thisPlayer.name
+    }).then(function () {
+        MESSAGESREF.push({
+            name: thisPlayer.name,
+            message: "connected."
+        });
     });
     console.log(thisPlayer);
+});
+
+
+// Use the enter key to submit the chat message
+document.querySelector("#message-text").addEventListener("keypress", function (event) {
+    if (event.keyCode == 13) {
+        event.preventDefault();
+        MESSAGESREF.push({
+            name: thisPlayer.name,
+            message: this.value.trim()
+        });
+        this.value = "";
+    };
+});
+
+
+// Use the button to submit the chat message
+document.querySelector("#message-button").addEventListener("click", function (event) {
+    event.preventDefault();
+    MESSAGESREF.push({
+        name: thisPlayer.name,
+        message: document.querySelector("#message-text").value.trim()
+    });
+    document.querySelector("#message-text").value = "";
+});
+
+
+MESSAGESREF.on("child_added", function (snap) {
+    let message = snap.val();
+    let container = document.querySelector("#message-list");
+    let messageWrapper = document.createElement("p");
+    let messageText = message.name + ((message.message === "connected." || message.message === "disconnected.") ? " " : ": ") + message.message;
+    messageWrapper.textContent = messageText;
+
+    container.appendChild(messageWrapper);
+    container.scrollTop = container.scrollHeight;
 });
