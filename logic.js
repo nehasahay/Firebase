@@ -4,21 +4,19 @@
 var config = {
     // Don't include this when you commit for security reasons.
     // Please include your own database!
-    apiKey: "",
-    authDomain: "",
-    databaseURL: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: ""
+    apiKey: "AIzaSyAJS4YQWU5DmESeYueG1qH1NGkjv3DncEY",
+    authDomain: "fir-click-counter-7cdb9.firebaseapp.com",
+    databaseURL: "https://fir-click-counter-7cdb9.firebaseio.com",
+    storageBucket: "fir-click-counter-7cdb9.appspot.com"
 };
 
 firebase.initializeApp(config);
 
-let player1Name = "Waiting for player 1...",
+let player1Name = "Waiting for Player 1...",
     player1Choice = "",
     player1Wins = 0,
     player1Losses = 0,
-    player2Name = "Waiting for player 2...",
+    player2Name = "Waiting for Player 2...",
     player2Choice = "",
     player2Wins = 0,
     player2Losses = 0,
@@ -125,6 +123,7 @@ document.querySelectorAll(".collection-item").forEach(choice => {
 PLAYERSREF.orderByKey().limitToFirst(2).on("child_added", function (snap) {
     players.push(snap.key);
     console.log(players);
+    displayPlayer();
 
 }, function (errorObject) {
     // In case of error this will print the error
@@ -157,12 +156,13 @@ function updateLocalPlayer1() {
     console.log(players[0]);
     PLAYERSREF.child(players[0]).on("value", function (snap) {
         console.log(snap.val());
+        player1Name = snap.val().name;
         player1Choice = snap.val().choice;
         player1Wins = snap.val().wins;
         player1Losses = snap.val().losses;
         $("#player1-wins").text(player1Wins);
         $("#player1-losses").text(player1Losses);
-
+        displayPlayer();
     }, function (errorObject) {
         // In case of error this will print the error
         console.log("The read failed: " + errorObject.code);
@@ -172,18 +172,36 @@ function updateLocalPlayer1() {
 
 function updateLocalPlayer2() {
     console.log(players[1]);
-    PLAYERSREF.child(players[1]).on("value", function (snap) {
-        console.log(snap.val());
-        player2Choice = snap.val().choice;
-        player2Wins = snap.val().wins;
-        player2Losses = snap.val().losses;
-        $("#player2-wins").text(player2Wins);
-        $("#player2-losses").text(player2Losses);
+    if (PLAYERSREF.child(players[1])) {
+        PLAYERSREF.child(players[1]).on("value", function (snap) {
+            console.log(snap.val());
+            player2Name = snap.val().name;
+            player2Choice = snap.val().choice;
+            player2Wins = snap.val().wins;
+            player2Losses = snap.val().losses;
+            $("#player2-wins").text(player2Wins);
+            $("#player2-losses").text(player2Losses);
+            displayPlayer();
+        }, function (errorObject) {
+            // In case of error this will print the error
+            console.log("The read failed: " + errorObject.code);
+        });
+    };
+};
 
-    }, function (errorObject) {
-        // In case of error this will print the error
-        console.log("The read failed: " + errorObject.code);
-    });
+
+function displayPlayer() {
+    let player1Header = document.querySelector("h5");
+    player1Header.textContent = player1Name;
+    let player2Header = document.querySelectorAll("h5")[1];
+    console.log(player2Header);
+    player2Header.textContent = (players.length < 2) ? "Waiting for Player 2..." : player2Name;
+    if (players.indexOf(thisPlayer.key) !== -1) {
+        let container = document.querySelectorAll(".collection")[players.indexOf(thisPlayer.key)];
+        Array.from(container.childNodes).forEach(choice => {
+            choice.className = "collection-item waves-effect waves-teal";
+        });
+    };
 };
 
 
