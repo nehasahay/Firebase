@@ -17,7 +17,7 @@
     <main class="container center-align">
         <div class="row">
             <section class="col s4">
-                <h5 id="player1">Player 1</h5>
+                <h5></h5>
                 <div class="collection">
                     <a href="#!" class="collection-item btn disabled">Rock</a>
                     <a href="#!" class="collection-item btn disabled">Paper</a>
@@ -29,10 +29,10 @@
                 </div>
             </section>
             <section class="col s4">
-                    <h3 id="result"></h3>
-                </section>
+                <h3 id="result"></h3>
+            </section>
             <section class="col s4">
-                <h5 id="player2">Player 2</h5>
+                <h5></h5>
                 <div class="collection">
                     <a href="#!" class="collection-item btn disabled">Rock</a>
                     <a href="#!" class="collection-item btn disabled">Paper</a>
@@ -44,32 +44,30 @@
                 </div>
             </section>
         </div>
-        <div class="card">
+        <section class="card">
             <div class="card-content">
-                <span class="card-title">Messages</span>
-                <div id="message-list" style="overflow-y: scroll; height: 25vh; word-break: break-word;"></div>
+                <span class="card-title">Chat</span>
+                <div id="message-list" class="left-align" style="overflow-y: scroll; height: 25vh; word-break: break-word;"></div>
             </div>
-            <div class="card-action">
+            <div class="card-action right-align">
                 <form>
                     <div class="input-field">
                         <textarea id="message-text" class="materialize-textarea"></textarea>
                         <label for="message-text">Message</label>
                     </div>
-                    <button type="submit" id="message-button" class="modal-close btn waves-effect waves-light">Send</button>
+                    <button type="submit" id="message-button" class="btn waves-effect waves-light">Send</button>
                 </form>
             </div>
-        </div>
-        <section>
-            <div id="name-modal" class="modal">
-                <div class="modal-content">
-                    <form>
-                        <div class="input-field">
-                            <input id="name-input" type="text" class="validate">
-                            <label for="name-input" class="active">Name</label>
-                        </div>
-                        <button type="submit" id="name-button" class="modal-close btn waves-effect waves-light">Play</button>
-                    </form>
-                </div>
+        </section>
+        <section id="name-modal" class="modal">
+            <div class="modal-content">
+                <form>
+                    <div class="input-field">
+                        <input id="name-input" type="text" class="validate">
+                        <label for="name-input" class="active">Name</label>
+                    </div>
+                    <button type="submit" id="name-button" class="modal-close btn waves-effect waves-light">Play</button>
+                </form>
             </div>
         </section>
     </main>

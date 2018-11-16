@@ -2,7 +2,7 @@
 
 // Initialize Firebase
 var config = {
-    // Don't include this when you commit for security reasons.
+    // Don't include this when you commit for security reasons
     // Please include your own database!
     apiKey: "AIzaSyAJS4YQWU5DmESeYueG1qH1NGkjv3DncEY",
     authDomain: "fir-click-counter-7cdb9.firebaseapp.com",
@@ -12,59 +12,70 @@ var config = {
 
 firebase.initializeApp(config);
 
-let player1Name = "Waiting for Player 1...",
-    player1Choice = "",
-    player1Wins = 0,
-    player1Losses = 0,
-    player2Name = "Waiting for Player 2...",
-    player2Choice = "",
-    player2Wins = 0,
-    player2Losses = 0,
-    players = [],
+let player1 = {
+        name: "Waiting for Player 1...",
+        choice: "",
+        wins: 0,
+        losses: 0,
+    },
+    player2 = {
+        name: "Waiting for Player 2...",
+        choice: "",
+        wins: 0,
+        losses: 0
+    },
     thisPlayer = {
         name: "",
         key: ""
-    };
+    },
+    players = [];
 
 // Where all potential players will be stored
 const PLAYERSREF = firebase.database().ref("/players"),
+    // Where the outcome of a game will be stored
+    OUTCOMEREF = firebase.database().ref("/outcome"),
     // Where the chat messages will be stored
     MESSAGESREF = firebase.database().ref("/messages"),
     // A special location that stores all clients connected
     CONNECTEDREF = firebase.database().ref(".info/connected");
 
 
+// Evaluates who won the game
 function playTheGame() {
     const player1WinConditions =
-        (player1Choice === "Rock" && player2Choice === "Scissors") ||
-        (player1Choice === "Paper" && player2Choice === "Rock") ||
-        (player1Choice === "Scissors" && player2Choice === "Paper");
+        (player1.choice === "Rock" && player2.choice === "Scissors") ||
+        (player1.choice === "Paper" && player2.choice === "Rock") ||
+        (player1.choice === "Scissors" && player2.choice === "Paper");
 
-    if (player1Choice === player2Choice) {
-        $("#result").text("It's a tie!");
+    if (player1.choice === player2.choice) {
+        OUTCOMEREF.set({
+            outcome: "It's a tie!"
+        });
     } else if (player1WinConditions) {
-        player1Wins++;
-        player2Losses++;
-        // This text isn't updated to sync across clients        
-        $("#result").text("Player 1 Wins!");
+        player1.wins++;
+        player2.losses++;
+        OUTCOMEREF.set({
+            outcome: player1.name + " wins!"
+        });
     } else {
-        player2Wins++;
-        player1Losses++;
-        // This text isn't updated to sync across clients
-        $("#result").text("Player 2 Wins!");
+        player2.wins++;
+        player1.losses++;
+        OUTCOMEREF.set({
+            outcome: player2.name + " wins!"
+        });
     };
 
     PLAYERSREF.child(players[0]).update({
-        wins: player1Wins,
-        losses: player1Losses,
+        wins: player1.wins,
+        losses: player1.losses,
         choice: ""
-    }).then(updateLocalPlayer1);
+    }).then(updateLocalPlayer(players[0], player1));
 
     PLAYERSREF.child(players[1]).update({
-        wins: player2Wins,
-        losses: player2Losses,
+        wins: player2.wins,
+        losses: player2.losses,
         choice: ""
-    }).then(updateLocalPlayer2);
+    }).then(updateLocalPlayer(players[1], player2));
 };
 
 
@@ -84,7 +95,9 @@ CONNECTEDREF.on("value", function (snap) {
         thisPlayer.key = player.key;
         console.log(thisPlayer);
         // Removes the player from the database if the client disconnects
-        player.onDisconnect().remove();
+        player.onDisconnect().remove(function () {
+            document.querySelector("#result").textContent = "";
+        });
     };
 
 }, function (errorObject) {
@@ -101,25 +114,41 @@ CONNECTEDREF.on("value", function (snap) {
 // });
 
 
+// Updates the choice made by a player
 document.querySelectorAll(".collection-item").forEach(choice => {
     choice.addEventListener("click", function () {
         if (players.indexOf(thisPlayer.key) !== -1) {
             PLAYERSREF.child(thisPlayer.key).update({
                 choice: this.text
             });
-            updateLocalPlayer1();
-            updateLocalPlayer2();
+            updateLocalPlayer(players[0], player1);
+            updateLocalPlayer(players[1], player2);
         };
 
-        if (player1Choice && player2Choice) {
+        OUTCOMEREF.set({
+            outcome: ""
+        });
+
+        if (player1.choice && player2.choice) {
             playTheGame();
         };
     });
 });
 
 
-// Replace the following two functions with "value" if you can't fix the disconnect error
-// Detects a new player 1 or 2.
+// Displays the outcome of a game
+OUTCOMEREF.on("value", function (snap) {
+    if (snap.val()) {
+        document.querySelector("#result").textContent = snap.val().outcome;
+    };
+}, function (errorObject) {
+    // In case of error this will print the error
+    console.log("The read failed: " + errorObject.code);
+});
+
+
+// Replace the following two functions with "value" for players = Object.keys(snap.val())?
+// Detects a new player 1 or 2
 PLAYERSREF.orderByKey().limitToFirst(2).on("child_added", function (snap) {
     players.push(snap.key);
     console.log(players);
@@ -131,19 +160,23 @@ PLAYERSREF.orderByKey().limitToFirst(2).on("child_added", function (snap) {
 });
 
 
-// Removes a disconnected player 1 or 2.
+// Removes a disconnected player
 PLAYERSREF.orderByKey().limitToFirst(2).on("child_removed", function (snap) {
     let index = players.indexOf(snap.key);
     players.splice(index, 1);
-    console.log(players);
 
-    // Update the local values of whichever player disconnected.
+    MESSAGESREF.push({
+        name: snap.val().name,
+        message: "disconnected."
+    });
+
+    // Update the local values of whichever player disconnected
     if (!index) {
-        player1Wins = 0;
-        player1Losses = 0;
+        player1.wins = 0;
+        player1.losses = 0;
     } else {
-        player2Wins = 0;
-        player2Losses = 0;
+        player2.wins = 0;
+        player2.losses = 0;
     };
 
 }, function (errorObject) {
@@ -152,16 +185,16 @@ PLAYERSREF.orderByKey().limitToFirst(2).on("child_removed", function (snap) {
 });
 
 
-function updateLocalPlayer1() {
-    console.log(players[0]);
-    PLAYERSREF.child(players[0]).on("value", function (snap) {
+// Pulls data about the given player and stores that locally
+function updateLocalPlayer(key, player) {
+    PLAYERSREF.child(key).on("value", function (snap) {
         console.log(snap.val());
-        player1Name = snap.val().name;
-        player1Choice = snap.val().choice;
-        player1Wins = snap.val().wins;
-        player1Losses = snap.val().losses;
-        $("#player1-wins").text(player1Wins);
-        $("#player1-losses").text(player1Losses);
+        if (snap.val()) {
+            player.name = snap.val().name;
+            player.choice = snap.val().choice;
+            player.wins = snap.val().wins;
+            player.losses = snap.val().losses;
+        };
         displayPlayer();
     }, function (errorObject) {
         // In case of error this will print the error
@@ -170,41 +203,26 @@ function updateLocalPlayer1() {
 };
 
 
-function updateLocalPlayer2() {
-    console.log(players[1]);
-    if (PLAYERSREF.child(players[1])) {
-        PLAYERSREF.child(players[1]).on("value", function (snap) {
-            console.log(snap.val());
-            player2Name = snap.val().name;
-            player2Choice = snap.val().choice;
-            player2Wins = snap.val().wins;
-            player2Losses = snap.val().losses;
-            $("#player2-wins").text(player2Wins);
-            $("#player2-losses").text(player2Losses);
-            displayPlayer();
-        }, function (errorObject) {
-            // In case of error this will print the error
-            console.log("The read failed: " + errorObject.code);
-        });
-    };
-};
-
-
+// Updates the display for the game
 function displayPlayer() {
     let player1Header = document.querySelector("h5");
-    player1Header.textContent = player1Name;
+    player1Header.textContent = player1.name;
     let player2Header = document.querySelectorAll("h5")[1];
-    console.log(player2Header);
-    player2Header.textContent = (players.length < 2) ? "Waiting for Player 2..." : player2Name;
+    player2Header.textContent = (players.length < 2) ? "Waiting for Player 2..." : player2.name;
     if (players.indexOf(thisPlayer.key) !== -1) {
         let container = document.querySelectorAll(".collection")[players.indexOf(thisPlayer.key)];
         Array.from(container.childNodes).forEach(choice => {
             choice.className = "collection-item waves-effect waves-teal";
         });
     };
+    $("#player1-wins").text(player1.wins);
+    $("#player1-losses").text(player1.losses);
+    $("#player2-wins").text(player2.wins);
+    $("#player2-losses").text(player2.losses);
 };
 
 
+// Displays a modal for the player's name once the page loads
 document.addEventListener("DOMContentLoaded", function () {
     var elem = document.querySelector("#name-modal");
     var instance = M.Modal.init(elem, {
@@ -214,6 +232,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
+// Stores this player's name
 document.querySelector("#name-button").addEventListener("click", function () {
     event.preventDefault();
     let input = document.querySelector("#name-input").value.trim();
@@ -226,13 +245,12 @@ document.querySelector("#name-button").addEventListener("click", function () {
             message: "connected."
         });
     });
-    console.log(thisPlayer);
 });
 
 
-// Use the enter key to submit the chat message
+// Use the enter key to submit a chat message
 document.querySelector("#message-text").addEventListener("keypress", function (event) {
-    if (event.keyCode == 13) {
+    if (event.keyCode === 13) {
         event.preventDefault();
         MESSAGESREF.push({
             name: thisPlayer.name,
@@ -243,7 +261,7 @@ document.querySelector("#message-text").addEventListener("keypress", function (e
 });
 
 
-// Use the button to submit the chat message
+// Use the button to submit a chat message
 document.querySelector("#message-button").addEventListener("click", function (event) {
     event.preventDefault();
     MESSAGESREF.push({
@@ -254,12 +272,17 @@ document.querySelector("#message-button").addEventListener("click", function (ev
 });
 
 
+// Adds a message to the chat
 MESSAGESREF.on("child_added", function (snap) {
     let message = snap.val();
     let container = document.querySelector("#message-list");
     let messageWrapper = document.createElement("p");
-    let messageText = message.name + ((message.message === "connected." || message.message === "disconnected.") ? " " : ": ") + message.message;
-    messageWrapper.textContent = messageText;
+    if (message.message === "connected." || message.message === "disconnected.") {
+        messageWrapper.innerHTML = "<em>" + message.name + " " + message.message + "</em>";
+        messageWrapper.className = "center-align";
+    } else {
+        messageWrapper.innerHTML = "<strong>" + message.name + ":</strong> " + message.message;
+    };
 
     container.appendChild(messageWrapper);
     container.scrollTop = container.scrollHeight;
